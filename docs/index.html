@@ -151,7 +151,27 @@
     </div>
 
     <script>
-        async function installApp() {
+        // Check for auto-install parameters on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoInstall = urlParams.get('install');
+            const dashboardUrl = urlParams.get('dashboard') || 'http://localhost:8000';
+            
+            // Set dashboard URL from parameter
+            if (urlParams.get('dashboard')) {
+                document.getElementById('dashboardUrl').value = dashboardUrl;
+            }
+            
+            // Auto-install if parameter is present
+            if (autoInstall === 'true' || autoInstall === '1') {
+                // Wait a moment for the page to fully load
+                setTimeout(() => {
+                    installApp(true);
+                }, 500);
+            }
+        });
+
+        async function installApp(isAutoInstall = false) {
             const dashboardUrl = document.getElementById('dashboardUrl').value.trim();
             const status = document.getElementById('status');
             const installBtn = document.getElementById('installBtn');
@@ -164,7 +184,12 @@
             try {
                 installBtn.disabled = true;
                 installBtn.innerHTML = '⏳ Installing...';
-                showStatus('loading', 'Installing app to your Reachy...');
+                
+                if (isAutoInstall) {
+                    showStatus('loading', '🚀 Auto-installing app to your Reachy...');
+                } else {
+                    showStatus('loading', 'Installing app to your Reachy...');
+                }
                 
                 const response = await fetch(`${dashboardUrl}/api/install`, {
                     method: 'POST',
@@ -181,13 +206,20 @@
                 
                 if (response.ok) {
                     showStatus('success', '✅ Installation started successfully! Check your Reachy dashboard for progress.');
+                    
+                    // If auto-install, show additional success message
+                    if (isAutoInstall) {
+                        setTimeout(() => {
+                            showStatus('success', '✅ Auto-installation completed! You can close this tab and check your Reachy dashboard.');
+                        }, 2000);
+                    }
                 } else {
                     throw new Error(result.detail || 'Installation failed');
                 }
 
             } catch (error) {
                 console.error('Installation error:', error);
-                showStatus('error', '❌ ' + error.message);
+                showStatus('error', '❌ ' + error.message + (isAutoInstall ? ' - You can try manual installation below.' : ''));
             } finally {
                 installBtn.disabled = false;
                 installBtn.innerHTML = '📥 Install App to Reachy';
